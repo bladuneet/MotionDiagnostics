@@ -1,0 +1,199 @@
+The MVP covers:
+
+Motorbike Dispatch System
+Mobile App for smartphone users
+USSD & SMS integration
+Test booking, tracking, and result delivery
+Drone delivery integration placeholder (for future extension)
+
+Tech Stack
+Backend: Django + Django REST Framework
+Frontend: React (Web), optional React Native (Mobile)
+USSD & SMS: Africa's Talking API (placeholder)
+Drone Integration: Mock logic for ZIPLINE/DJI SDK
+Database: PostgreSQL or SQLite
+
+📁 Folder Structure
+pgsql
+
+mobile-diagnostic-mvp/
+├── backend/
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── diagnostics/
+│   │   ├── models.py
+│   │   ├── views.py
+│   │   ├── urls.py
+│   │   ├── ussd.py
+│   │   ├── sms.py
+│   │   ├── drone.py
+│   │   └── serializers.py
+│   └── project/
+│       ├── settings.py
+│       └── urls.py
+├── frontend/
+│   └── react-app/
+│       ├── src/
+│       │   ├── pages/
+│       │   ├── components/
+│       │   └── App.js
+│       └── package.json
+└── README.md
+🔧 Backend Code Highlights
+models.py
+python
+
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):
+    phone = models.CharField(max_length=15, unique=True)
+    role = models.CharField(max_length=20, choices=(
+        ('patient', 'Patient'), ('collector', 'Sample Collector'), ('admin', 'Admin')
+    ))
+    location = models.CharField(max_length=255)
+
+class Appointment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    scheduled_time = models.DateTimeField()
+    status = models.CharField(max_length=20, default='pending')  # pending, confirmed, completed
+    assigned_collector = models.ForeignKey(User, null=True, blank=True, related_name='assigned_collector', on_delete=models.SET_NULL)
+
+class TestResult(models.Model):
+    appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE)
+    result = models.TextField()
+    delivered = models.BooleanField(default=False)
+
+class DroneDeliveryRequest(models.Model):
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE)
+    destination = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, default='queued')  # queued, in_transit, delivered
+views.py
+python
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Appointment, TestResult
+from django.utils import timezone
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def book_appointment(request):
+    time = request.data.get('scheduled_time')
+    appointment = Appointment.objects.create(user=request.user, scheduled_time=time)
+    return Response({"message": "Appointment booked", "appointment_id": appointment.id})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_results(request):
+    results = TestResult.objects.filter(appointment__user=request.user)
+    return Response([{"id": r.id, "result": r.result, "delivered": r.delivered} for r in results])
+ussd.py (Africa’s Talking USSD Placeholder)
+python
+
+def handle_ussd(session_id, phone_number, text):
+    if text == "":
+        return "CON Welcome to Mobile Diagnostics\n1. Book Test\n2. Get Results"
+    elif text == "1":
+        return "CON Enter preferred date (YYYY-MM-DD)"
+    elif text.startswith("1*"):
+        return "END Appointment request received. You will be contacted."
+    elif text == "2":
+        return "END Result: Negative (Example)"
+    else:
+        return "END Invalid option"
+sms.py (Send SMS Alerts)
+python
+
+def send_sms(phone, message):
+    # Replace with Africa's Talking, Twilio, or SMS gateway
+    print(f"Sending SMS to {phone}: {message}")
+drone.py (Drone Delivery Mock)
+python
+
+def trigger_drone_delivery(appointment):
+    # Placeholder for Zipline or DJI SDK
+    print(f"Drone launched to deliver from appointment {appointment.id} to {appointment.user.location}")
+    return True
+serializers.py
+python
+
+from rest_framework import serializers
+from .models import Appointment, TestResult
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = '__all__'
+
+class TestResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestResult
+        fields = '__all__'
+🌐 Frontend (React) Sample — Appointment Booking
+/pages/BookTest.js
+jsx
+
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function BookTest() {
+  const [time, setTime] = useState('');
+
+  const handleSubmit = () => {
+    axios.post('/api/book/', { scheduled_time: time }, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    }).then(res => alert(res.data.message));
+  };
+
+  return (
+    <div>
+      <h2>Book Diagnostic Test</h2>
+      <input type="datetime-local" onChange={e => setTime(e.target.value)} />
+      <button onClick={handleSubmit}>Book</button>
+    </div>
+  );
+}
+
+export default BookTest;
+📦 requirements.txt
+
+
+Django>=4.2
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+📝 GitHub README.md Sample
+md
+
+# Mobile Diagnostic Platform – MVP
+
+## 🚑 What It Does
+- On-demand mobile diagnostic booking (motorbike collectors)
+- USSD/SMS access for rural patients
+- Secure results delivery
+- Drone delivery mock for remote communities
+
+## 📲 Features
+- Motorbike dispatch booking
+- Mobile app + React frontend
+- SMS reminders
+- USSD booking for feature phone users
+- Drone logistics (future support)
+
+## ⚙️ Setup
+
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+Frontend
+bash
+
+cd frontend/react-app
+npm install
+npm start
